@@ -942,3 +942,38 @@ int mixer_consume_event(struct mixer *mixer)
     return 0;
 }
 
+/** Read a mixer event.
+ * If mixer_subscribe_events has been called,
+ * mixer_wait_event will identify when a control value has changed.
+ * This function will read and clear a single event from the mixer
+ * so that further events can be alerted.
+ *
+ * @param mixer A mixer handle.
+ * @param ev snd_ctl_event pointer where event needs to be read
+ * @returns 0 on success.  -errno on failure.
+ * @ingroup libtinyalsa-mixer
+ */
+int mixer_read_event(struct mixer *mixer, struct ctl_event *ev)
+{
+    struct mixer_ctl_group *grp;
+    ssize_t count = 0;
+
+    if (mixer->hw_grp) {
+        grp = mixer->hw_grp;
+        if (grp->event_cnt) {
+            grp->event_cnt--;
+            count = grp->ops->read_event(grp->data, (struct snd_ctl_event *)ev, sizeof(*ev));
+            return (count >= 0) ? 0 : -errno;
+        }
+    }
+
+    if (mixer->virt_grp) {
+        grp = mixer->virt_grp;
+        if (grp->event_cnt) {
+            grp->event_cnt--;
+            count = grp->ops->read_event(grp->data, (struct snd_ctl_event *)ev, sizeof(*ev));
+            return (count >= 0) ? 0 : -errno;
+        }
+    }
+    return 0;
+}
